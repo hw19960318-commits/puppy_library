@@ -1,0 +1,39 @@
+{
+  "name": "puppy_library",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0",
+    "build": "prisma generate && next build",
+    "start": "next start -H 0.0.0.0",
+    "lint": "eslint",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate",
+    "import:books": "tsx scripts/importBooks.ts",
+    "describe:books": "tsx scripts/generateDescriptions.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "cheerio": "^1.2.0",
+    "date-fns": "^4.4.0",
+    "next": "16.3.3",
+    "prisma": "^6.19.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sharp": "^0.35.4",
+    "tesseract.js": "^7.0.0",
+    "zod": "^4.5.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.12",
+    "typescript": "^5"
+  }
+}

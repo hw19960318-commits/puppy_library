@@ -1,0 +1,208 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fff8f0;
+  --foreground: #3d2c1e;
+  --card: #ffffff;
+  --accent: #f59e0b;
+  --accent-soft: #fef3c7;
+  /* 暖棕调分层阴影：替代生硬的中性灰阴影 */
+  --warm-shadow-sm: 0 1px 2px rgba(146, 94, 32, 0.05), 0 4px 12px -6px rgba(146, 94, 32, 0.1);
+  --warm-shadow-md: 0 2px 4px rgba(146, 94, 32, 0.05), 0 12px 32px -12px rgba(146, 94, 32, 0.18);
+  --warm-shadow-lg: 0 4px 8px rgba(146, 94, 32, 0.06), 0 24px 48px -16px rgba(146, 94, 32, 0.24);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-noto-sans-sc), "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  /* 暴露为 Tailwind 工具类：shadow-warm-sm / shadow-warm / shadow-warm-lg */
+  --shadow-warm-sm: var(--warm-shadow-sm);
+  --shadow-warm: var(--warm-shadow-md);
+  --shadow-warm-lg: var(--warm-shadow-lg);
+}
+
+body {
+  background-color: var(--background);
+  /* 顶部暖光晕 + 两层错落的极淡爪印，营造纸质温度感 */
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(251, 191, 36, 0.12), transparent),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg transform='rotate(-15 24 24)' fill='%23b45309' fill-opacity='0.05'%3E%3Cellipse cx='24' cy='29' rx='6.4' ry='5.1'/%3E%3Ccircle cx='14.9' cy='21.2' r='2.7'/%3E%3Ccircle cx='21' cy='16.9' r='2.7'/%3E%3Ccircle cx='27.4' cy='16.9' r='2.7'/%3E%3Ccircle cx='33.5' cy='21.2' r='2.7'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg transform='rotate(20 24 24)' fill='%23b45309' fill-opacity='0.035'%3E%3Cellipse cx='24' cy='29' rx='6.4' ry='5.1'/%3E%3Ccircle cx='14.9' cy='21.2' r='2.7'/%3E%3Ccircle cx='21' cy='16.9' r='2.7'/%3E%3Ccircle cx='27.4' cy='16.9' r='2.7'/%3E%3Ccircle cx='33.5' cy='21.2' r='2.7'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: auto, 132px 132px, 196px 196px;
+  background-position: top center, 0 0, 66px 88px;
+  background-repeat: no-repeat, repeat, repeat;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+/* 温和滚动与选中色 */
+::selection {
+  background: #fcd34d;
+  color: #451a03;
+}
+
+/* ============ 动效关键帧 ============ */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: scale(0.55); opacity: 0.35; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* 可配合 motion-safe: 变体使用的工具类 */
+@utility animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@utility animate-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.21, 0.86, 0.36, 1) both;
+}
+
+@layer components {
+  /* 白卡：极淡棕边 + 分层暖阴影，取代「一圈 amber 边」 */
+  .card {
+    background: var(--card);
+    border: 1px solid rgba(180, 83, 9, 0.08);
+    border-radius: 1.25rem;
+    box-shadow: var(--warm-shadow-sm);
+  }
+
+  /* 主按钮：琥珀渐变 + 内高光，hover 上浮、按压下沉 */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    padding: 0.625rem 1.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #fff;
+    text-shadow: 0 1px 1px rgba(146, 64, 14, 0.25);
+    background: linear-gradient(150deg, #fbbf24 0%, #f59e0b 45%, #f97316 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 2px 6px -1px rgba(217, 119, 6, 0.45),
+      0 8px 20px -8px rgba(217, 119, 6, 0.5);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  }
+  .btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 4px 10px -2px rgba(217, 119, 6, 0.5),
+      0 12px 28px -8px rgba(217, 119, 6, 0.55);
+  }
+  .btn-primary:active {
+    transform: translateY(0) scale(0.97);
+    filter: brightness(0.98);
+  }
+  .btn-primary:disabled {
+    opacity: 0.55;
+    transform: none;
+    filter: none;
+    cursor: not-allowed;
+  }
+
+  /* 次按钮：米白底 + 细边，与主按钮同圆角语言 */
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    padding: 0.625rem 1.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #78350f;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    box-shadow: 0 1px 2px rgba(146, 94, 32, 0.06);
+    transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .btn-secondary:hover {
+    background: #fef3c7;
+    border-color: #fcd34d;
+  }
+  .btn-secondary:active {
+    transform: scale(0.97);
+  }
+  .btn-secondary:disabled {
+    opacity: 0.55;
+    transform: none;
+    cursor: not-allowed;
+  }
+
+  /* 幽灵按钮：低强调操作 */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    color: #78716c;
+    background: transparent;
+    transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  }
+  .btn-ghost:hover {
+    color: #92400e;
+    background: rgba(254, 243, 199, 0.6);
+  }
+  .btn-ghost:active {
+    transform: scale(0.97);
+  }
+
+  /* 输入框：统一圆角与聚焦光晕 */
+  .input {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid #fde8c8;
+    background: #fff;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    color: var(--foreground);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .input::placeholder {
+    color: #b8ab9e;
+  }
+  .input:focus {
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.35);
+  }
+
+  /* 加载圆点：依次跳动 */
+  .loading-dot {
+    animation: dot-bounce 1.2s infinite ease-in-out;
+  }
+
+  /* 吉祥物气泡：带小尾巴 */
+  .bubble {
+    position: relative;
+  }
+  .bubble::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    transform: translateX(-50%) rotate(45deg);
+    background: inherit;
+    border-radius: 2px;
+  }
+}

@@ -1,0 +1,52 @@
+// 奥奥图书馆数据模型
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// 藏书状态：未读 / 想读 / 在读 / 读过
+enum BookStatus {
+  unread
+  wantToRead
+  reading
+  read
+}
+
+/// 实体书条目
+model Book {
+  id           String     @id @default(cuid())
+  title        String
+  author       String     @default("")
+  isbn         String?
+  publisher    String?
+  publishDate  String?
+  coverPath    String?
+  description  String?
+  /// 标签 JSON 数组字符串，如 ["小说","科幻"]
+  tags         String     @default("[]")
+  /// 分类（可选，用于相似推荐）
+  category     String?
+  doubanId     String?
+  doubanRating Float?
+  status       BookStatus @default(unread)
+  myRating     Int?
+  myNotes      String?
+  purchasedAt  DateTime?
+  finishedAt   DateTime?
+  isPrivate    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+/// 豆瓣抓取缓存，默认保留 30 天
+model DoubanCache {
+  id         String   @id @default(cuid())
+  /// 豆瓣 subjectId 或 isbn:XXXXXXXXXX
+  cacheKey   String   @unique
+  payload    String
+  fetchedAt  DateTime @default(now())
+}
