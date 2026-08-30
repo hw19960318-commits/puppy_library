@@ -10,17 +10,13 @@
  *     "isbn": "9787536692930",
  *     "status": "wantToRead",
  *     "tags": ["科幻"],
- *     "category": "科幻",
- *     "coverPath": "/covers/xxx.jpg"
+ *     "category": "科幻"
  *   }
  * ]
- *
- * 若提供 isbn，会排队调用豆瓣补全缺失字段（限速）。
  */
 import { readFile } from "fs/promises";
 import path from "path";
 import { BookStatus, PrismaClient } from "@prisma/client";
-import { fetchByIsbn } from "../src/lib/douban";
 
 const prisma = new PrismaClient();
 
@@ -30,14 +26,12 @@ type ImportItem = {
   isbn?: string;
   publisher?: string;
   publishDate?: string;
-  coverPath?: string;
   description?: string;
   tags?: string[];
   category?: string;
   status?: keyof typeof BookStatus;
   finishedAt?: string;
   purchasedAt?: string;
-  fetchDouban?: boolean;
 };
 
 async function main() {
@@ -66,61 +60,25 @@ async function main() {
       continue;
     }
 
-    let meta = { ...item };
-
-    // ISBN 存在且未显式关闭时，排队补全豆瓣
-    if (item.isbn && item.fetchDouban !== false) {
-      console.log(`[${i + 1}] 豆瓣补全 ISBN ${item.isbn}…`);
-      try {
-        const info = await fetchByIsbn(item.isbn);
-        if (!info.degraded) {
-          meta = {
-            ...meta,
-            title: meta.title || info.title || meta.title,
-            author: meta.author || info.author,
-            publisher: meta.publisher || info.publisher,
-            publishDate: meta.publishDate || info.publishDate,
-            description: meta.description || info.description,
-            tags: meta.tags?.length ? meta.tags : info.tags,
-            coverPath: meta.coverPath || info.coverUrl,
-          };
-          (meta as ImportItem & { doubanId?: string; doubanRating?: number }).doubanId =
-            info.subjectId;
-          (meta as ImportItem & { doubanRating?: number }).doubanRating = info.rating;
-        } else {
-          console.warn(`  降级：${info.error}`);
-        }
-      } catch (e) {
-        console.warn(`  豆瓣失败：`, e);
-      }
-    }
-
-    const extended = meta as ImportItem & {
-      doubanId?: string;
-      doubanRating?: number;
-    };
-
     const status =
-      meta.status && BookStatus[meta.status]
-        ? BookStatus[meta.status]
+      item.status && BookStatus[item.status]
+        ? BookStatus[item.status]
         : BookStatus.unread;
 
     const book = await prisma.book.create({
       data: {
-        title: meta.title.trim(),
-        author: meta.author?.trim() || "",
-        isbn: meta.isbn?.replace(/[-\s]/g, "") || null,
-        publisher: meta.publisher || null,
-        publishDate: meta.publishDate || null,
-        coverPath: meta.coverPath || null,
-        description: meta.description || null,
-        tags: JSON.stringify(meta.tags ?? []),
-        category: meta.category || null,
-        doubanId: extended.doubanId || null,
-        doubanRating: extended.doubanRating ?? null,
+        title: item.title.trim(),
+        author: item.author?.trim() || "",
+        isbn: item.isbn?.replace(/[-\s]/g, "") || null,
+        publisher: item.publisher || null,
+        publishDate: item.publishDate || null,
+        coverPath: null,
+        description: item.description || null,
+        tags: JSON.stringify(item.tags ?? []),
+        category: item.category || null,
         status,
-        finishedAt: meta.finishedAt ? new Date(meta.finishedAt) : null,
-        purchasedAt: meta.purchasedAt ? new Date(meta.purchasedAt) : null,
+        finishedAt: item.finishedAt ? new Date(item.finishedAt) : null,
+        purchasedAt: item.purchasedAt ? new Date(item.purchasedAt) : null,
       },
     });
 

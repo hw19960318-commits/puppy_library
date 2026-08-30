@@ -1,9 +1,8 @@
 "use client";
 
-import { FormEvent, useId, useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mascot } from "@/components/Mascot";
-import type { DoubanBookInfo } from "@/lib/types";
 
 type ChecklistItem = {
   id: string;
@@ -22,7 +21,6 @@ export default function AddBookPage() {
   const [importing, setImporting] = useState(false);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [message, setMessage] = useState("");
-  const [manualOpen, setManualOpen] = useState(false);
 
   function onPickPhotos(fileList: FileList | null) {
     if (!fileList?.length) return;
@@ -56,7 +54,7 @@ export default function AddBookPage() {
       const titles = (data.titles as string[]) ?? [];
       if (titles.length === 0) {
         setChecklist([]);
-        setMessage("未识别到可用书名，请换更清晰的书脊特写后再试，或改用下方手动录入");
+        setMessage("未识别到可用书名，请换更清晰的书脊特写后再试，或点「手填书名」");
         return;
       }
       setChecklist(
@@ -157,7 +155,7 @@ export default function AddBookPage() {
             录入新书
           </h1>
           <p className="mt-1.5 text-sm leading-relaxed text-stone-500">
-            拍整排书架/书脊 → 自动识别候选书名 → 核对勾选后批量入库（照片不当封面）
+            拍整排书架/书脊 → 自动识别候选书名 → 核对勾选后批量入库
           </p>
         </div>
         <Mascot size="sm" />
@@ -235,6 +233,13 @@ export default function AddBookPage() {
             className="btn-primary"
           >
             {ocrRunning ? "识别中…" : "开始 OCR 识别"}
+          </button>
+          <button
+            type="button"
+            onClick={addBlankRow}
+            className="btn-ghost"
+          >
+            手填书名
           </button>
         </div>
 
@@ -336,297 +341,6 @@ export default function AddBookPage() {
           </p>
         )}
       </section>
-
-      {/* 次要：单本手动录入 */}
-      <section className="card overflow-hidden bg-white/85">
-        <button
-          type="button"
-          onClick={() => setManualOpen((v) => !v)}
-          className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-medium text-stone-700 transition-colors hover:bg-amber-50/50"
-        >
-          <span>单本手动录入 / ISBN 豆瓣补全</span>
-          <span
-            aria-hidden
-            className={`text-stone-400 transition-transform duration-200 ${
-              manualOpen ? "rotate-180" : ""
-            }`}
-          >
-            ▾
-          </span>
-        </button>
-        {manualOpen && (
-          <div className="border-t border-amber-900/8 px-5 pb-5">
-            <ManualSingleEntry />
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-/** 折叠区内的原有单本录入（含 ISBN / 可选封面） */
-function ManualSingleEntry() {
-  const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
-  const [isbn, setIsbn] = useState("");
-  const [publisher, setPublisher] = useState("");
-  const [publishDate, setPublishDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
-  const [category, setCategory] = useState("");
-  const [coverPath, setCoverPath] = useState("");
-  const [doubanId, setDoubanId] = useState("");
-  const [doubanRating, setDoubanRating] = useState<number | undefined>();
-  const [status, setStatus] = useState("unread");
-  const [fetching, setFetching] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const [doubanUrl, setDoubanUrl] = useState("");
-
-  async function fetchDouban() {
-    const clean = isbn.replace(/[-\s]/g, "");
-    if (!/^\d{10,13}$/.test(clean)) {
-      setMessage("请输入有效的 10/13 位 ISBN");
-      return;
-    }
-    setFetching(true);
-    setMessage("正在向豆瓣查询…（可能需要几秒）");
-    try {
-      const res = await fetch(`/api/douban?isbn=${encodeURIComponent(clean)}`);
-      const data = await res.json();
-      const info = data.info as DoubanBookInfo;
-      if (info.degraded) {
-        setMessage(info.error || "豆瓣暂不可用，请手动填写");
-        if (info.url) setDoubanUrl(info.url);
-        return;
-      }
-      if (info.title) setTitle(info.title);
-      if (info.author) setAuthor(info.author);
-      if (info.publisher) setPublisher(info.publisher);
-      if (info.publishDate) setPublishDate(info.publishDate);
-      if (info.description) setDescription(info.description);
-      if (info.tags?.length) setTags(info.tags.join(", "));
-      if (info.subjectId) setDoubanId(info.subjectId);
-      if (info.rating != null) setDoubanRating(info.rating);
-      if (info.isbn) setIsbn(info.isbn);
-      if (info.url) setDoubanUrl(info.url);
-      if (info.coverUrl && !coverPath) {
-        setCoverPath(info.coverUrl);
-      }
-      setMessage("已从豆瓣补全信息，请确认后保存");
-    } catch {
-      setMessage("查询失败，请手动填写");
-    } finally {
-      setFetching(false);
-    }
-  }
-
-  async function onUpload(file: File) {
-    setUploading(true);
-    setMessage("");
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) {
-        setMessage(data.error || "上传失败");
-        return;
-      }
-      setCoverPath(data.coverPath);
-      setMessage("封面上传成功");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) {
-      setMessage("书名不能为空");
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await fetch("/api/books", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          author,
-          isbn,
-          publisher,
-          publishDate,
-          description,
-          tags: tags
-            .split(/[,，]/)
-            .map((t) => t.trim())
-            .filter(Boolean),
-          category: category || undefined,
-          coverPath: coverPath || undefined,
-          doubanId: doubanId || undefined,
-          doubanRating,
-          status,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setMessage(data.error || "保存失败");
-        return;
-      }
-      router.push(`/books/${data.book.id}`);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form onSubmit={onSubmit} className="space-y-4 pt-4">
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-stone-700">
-          ISBN
-        </label>
-        <div className="flex gap-2">
-          <input
-            value={isbn}
-            onChange={(e) => setIsbn(e.target.value)}
-            placeholder="9787xxxxxxxxx"
-            className="input flex-1"
-          />
-          <button
-            type="button"
-            onClick={fetchDouban}
-            disabled={fetching}
-            className="shrink-0 rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-sky-600 active:scale-95 disabled:opacity-50"
-          >
-            {fetching ? "查询中…" : "豆瓣补全"}
-          </button>
-        </div>
-        {doubanUrl && (
-          <a
-            href={doubanUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1.5 inline-block text-xs text-sky-600 underline"
-          >
-            打开豆瓣条目
-          </a>
-        )}
-      </div>
-
-      <Field label="书名 *" value={title} onChange={setTitle} required />
-      <Field label="作者" value={author} onChange={setAuthor} />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="出版社" value={publisher} onChange={setPublisher} />
-        <Field label="出版日期" value={publishDate} onChange={setPublishDate} />
-      </div>
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-stone-700">
-          简介
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          className="input"
-        />
-      </div>
-      <Field
-        label="标签（逗号分隔）"
-        value={tags}
-        onChange={setTags}
-        placeholder="小说, 科幻"
-      />
-      <Field label="分类" value={category} onChange={setCategory} placeholder="文学" />
-
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-stone-700">
-          初始状态
-        </label>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="input"
-        >
-          <option value="unread">未读</option>
-          <option value="wantToRead">想读</option>
-          <option value="reading">在读</option>
-          <option value="read">读过</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-stone-700">
-          封面（可选，非书架照）
-        </label>
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="cursor-pointer rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/70 px-4 py-3 text-sm text-amber-800 transition-all hover:border-amber-400 hover:bg-amber-100/70 active:scale-[0.98]">
-            {uploading ? "上传中…" : "选择封面图"}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) onUpload(f);
-              }}
-            />
-          </label>
-          {coverPath && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={coverPath}
-              alt="封面预览"
-              className="h-28 rounded-lg object-cover shadow-warm-sm ring-1 ring-amber-900/8"
-            />
-          )}
-        </div>
-      </div>
-
-      {message && (
-        <p className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm leading-relaxed text-amber-900 ring-1 ring-amber-100">
-          {message}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={saving}
-        className="w-full rounded-xl bg-stone-700 py-3 font-medium text-white shadow-sm transition-all hover:bg-stone-800 active:scale-[0.98] disabled:opacity-50"
-      >
-        {saving ? "保存中…" : "保存单本到书架"}
-      </button>
-    </form>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  required,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  required?: boolean;
-  placeholder?: string;
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-stone-700">
-        {label}
-      </label>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        placeholder={placeholder}
-        className="input"
-      />
     </div>
   );
 }
